@@ -451,7 +451,6 @@ def pt_frechet_mean(
         warmstart=None, verbose=False, method="streaming",
         return_aligned_Xs=False
     ):
-    NotImplementedError("Not yet implemented.")
     if group== "identity":
         return torch.mean(Xs, dim=0)
 

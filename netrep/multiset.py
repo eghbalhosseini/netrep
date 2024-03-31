@@ -461,7 +461,10 @@ def pt_frechet_mean(
             verbose
         )
     elif method == "full_batch":
-        NotImplementedError("Not yet implemented.")
+        Xbar = _pt_euclidean_barycenter_full_batch(
+            Xs, group, random_state, tol, max_iter, warmstart,
+            verbose
+        )
     if return_aligned_Xs:
         aligned_Xs = [
             x @ pt_align(x, Xbar, group=group) for x in Xs
@@ -473,7 +476,6 @@ def pt_frechet_mean(
 def _pt_euc_barycenter_streaming(
         Xs, group, random_state, tol, max_iter, warmstart, verbose
     ):
-    NotImplementedError("Not yet implemented.")
     if group == "identity":
         return torch.mean(Xs, dim=0)
         # Check input
@@ -513,6 +515,62 @@ def _pt_euc_barycenter_streaming(
             print(f"Iteration {itercount}, Change: {chg}")
         # Move to next iteration, with new random ordering over datasets.
         rs.shuffle(indices)
+        itercount += 1
+
+    return Xbar
+
+
+def _pt_euclidean_barycenter_full_batch(
+        Xs, group, random_state, tol, max_iter, warmstart, verbose
+):
+
+
+    # Handle simple case of no alignment operation. This is just a classic average.
+    if group == "identity":
+        return torch.mean(Xs, dim=0)
+
+    # Check input
+    Xs=torch.stack(Xs)
+    if Xs.ndim != 3:
+        raise ValueError(
+            "Expected 3d array with shape"
+            "(n_datasets x n_observations x n_features), but "
+            "got {}-d array with shape {}".format(Xs.ndim, Xs.shape))
+
+    # If only one matrix is provided, the barycenter is trivial.
+    if Xs.shape[0] == 1:
+        return Xs[0]
+
+    # Check random state and initialize random permutation over networks.
+    rs = check_random_state(random_state)
+
+    # Initialize barycenter.
+    Xbar = Xs[np.random.randint(len(Xs))] if (warmstart is None) else warmstart
+    X0 = torch.empty_like(Xbar)
+
+    # Main loop
+    itercount, n, chg = 0, 1, np.inf
+    while (chg > tol) and (itercount < max_iter):
+
+        # Save current barycenter for convergence checking.
+        X0.copy_(Xbar)
+        Xbar.fill_(0.0)
+
+        # Iterate over datasets. Align each dataset to last
+        # average (held in X0), take running sum.
+        for x in Xs:
+            Xbar += x @ pt_align(x, X0, group=group)
+
+        Xbar /= len(Xs)
+
+        # Detect convergence.
+        chg=torch.norm(Xbar - X0) / torch.sqrt(torch.tensor(Xbar.numel(), dtype=torch.float))
+
+        # Display progress.
+        if verbose:
+            print(f"Iteration {itercount}, Change: {chg}")
+
+        # Move to next iteration, with new random ordering over datasets.
         itercount += 1
 
     return Xbar

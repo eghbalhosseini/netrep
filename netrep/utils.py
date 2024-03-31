@@ -20,17 +20,17 @@ def pt_orthogonal_procrustes(A,B,check_finite=True):
     """
     # see https://github.com/scipy/scipy/blob/4edfcaa3ce8a387450b6efce968572def71be089/scipy/linalg/_procrustes.py#L86 for implementation
     # compute condition number
-    if abs(1-B.shape[0]/B.shape[1]) < .5  :
+    if B.shape[0]/B.shape[1] < .5:
         # if A and B are well conditioned
-        driver_type = 'gesvdj'
-    else:
         driver_type = 'gesvd'
-    U, w, Vt = torch.linalg.svd((B.t() @ A).t(),driver=driver_type)
-    R=U @ Vt.t()
+        U, w, Vt = torch.svd_lowrank((B.t() @ A).t(), q=min(B.shape))
+    else:
+        driver_type = 'gesvdj'
+        U, w, Vt = torch.linalg.svd((B.t() @ A).t(), driver=driver_type)
 
+    R=U @ Vt.t()
     scale=torch.sum(w)
     return R, scale
-
 
 def align(
     X: npt.NDArray, 

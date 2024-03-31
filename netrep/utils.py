@@ -19,10 +19,18 @@ def pt_orthogonal_procrustes(A,B,check_finite=True):
     both A and be needs to be size (M,N) and tensors in pytorch
     """
     # see https://github.com/scipy/scipy/blob/4edfcaa3ce8a387450b6efce968572def71be089/scipy/linalg/_procrustes.py#L86 for implementation
-    U, w, Vt = torch.svd((B.t() @ A).t())
+    # compute condition number
+    if abs(1-B.shape[0]/B.shape[1]) < .5  :
+        # if A and B are well conditioned
+        driver_type = 'gesvdj'
+    else:
+        driver_type = 'gesvd'
+    U, w, Vt = torch.linalg.svd((B.t() @ A).t(),driver=driver_type)
     R=U @ Vt.t()
+
     scale=torch.sum(w)
     return R, scale
+
 
 def align(
     X: npt.NDArray, 

@@ -12,7 +12,17 @@ from scipy.stats import ortho_group
 from sklearn.utils.extmath import randomized_svd
 from sklearn.metrics.pairwise import pairwise_kernels
 from sklearn.utils.validation import check_random_state
+import torch
 
+def pt_orthogonal_procrustes(A,B,check_finite=True):
+    """Orthogonal Procrustes alignment of two matrices A and B.
+    both A and be needs to be size (M,N) and tensors in pytorch
+    """
+    # see https://github.com/scipy/scipy/blob/4edfcaa3ce8a387450b6efce968572def71be089/scipy/linalg/_procrustes.py#L86 for implementation
+    U, w, Vt = torch.svd((B.t() @ A).t())
+    R=U @ Vt.t()
+    scale=torch.sum(w)
+    return R, scale
 
 def align(
     X: npt.NDArray, 
@@ -60,6 +70,20 @@ def align(
     elif group == "identity":
         return scipy.sparse.eye(X.shape[1])
 
+    else:
+        raise ValueError(f"Specified group '{group}' not recognized.")
+
+def pt_align(
+        X: torch.Tensor,
+        Y: torch.Tensor,
+        group: Literal["orth", "perm", "identity"] = "orth"
+        ) -> torch.Tensor:
+    if group == "orth":
+        return pt_orthogonal_procrustes(X,Y)[0]
+    elif group == "perm":
+        NotImplementedError
+    elif group == "identity":
+        return torch.eye(X.shape[1])
     else:
         raise ValueError(f"Specified group '{group}' not recognized.")
 

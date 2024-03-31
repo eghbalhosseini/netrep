@@ -2,8 +2,8 @@ import itertools
 import numpy as np
 from tqdm import tqdm
 from sklearn.utils.validation import check_array, check_random_state
-from netrep.utils import align
-
+from netrep.utils import align, pt_align
+import torch
 
 def euclidean_tangent_space(Xs, Xbar, group="orth"):
     """
@@ -438,6 +438,79 @@ def _euclidean_barycenter_streaming(
         if verbose:
             print(f"Iteration {itercount}, Change: {chg}")
 
+        # Move to next iteration, with new random ordering over datasets.
+        rs.shuffle(indices)
+        itercount += 1
+
+    return Xbar
+
+
+def pt_frechet_mean(
+        Xs, group="orth",
+        random_state=None, tol=1e-3, max_iter=100,
+        warmstart=None, verbose=False, method="streaming",
+        return_aligned_Xs=False
+    ):
+    NotImplementedError("Not yet implemented.")
+    if group== "identity":
+        return torch.mean(Xs, dim=0)
+
+    if method == "streaming":
+        Xbar = _pt_euc_barycenter_streaming(
+            Xs, group, random_state, tol, max_iter, warmstart,
+            verbose
+        )
+    elif method == "full_batch":
+        NotImplementedError("Not yet implemented.")
+    if return_aligned_Xs:
+        aligned_Xs = [
+            x @ pt_align(x, Xbar, group=group) for x in Xs
+        ]
+
+    return (Xbar, aligned_Xs) if return_aligned_Xs else Xbar
+
+
+def _pt_euc_barycenter_streaming(
+        Xs, group, random_state, tol, max_iter, warmstart, verbose
+    ):
+    NotImplementedError("Not yet implemented.")
+    if group == "identity":
+        return torch.mean(Xs, dim=0)
+        # Check input
+    # stack Xs
+    Xs=torch.stack(Xs)
+    if Xs.ndim != 3:
+        raise ValueError(
+            "Expected 3d array with shape"
+            "(n_datasets x n_observations x n_features), but "
+            "got {}-d array with shape {}".format(Xs.ndim, Xs.shape))
+    # If only one matrix is provided, the barycenter is trivial.
+    if Xs.shape[0] == 1:
+        return Xs[0]
+    # Check random state and initialize random permutation over networks.
+    rs = check_random_state(random_state)
+    indices = rs.permutation(len(Xs))
+    # Initialize barycenter.
+    Xbar = Xs[indices[-1]] if (warmstart is None) else warmstart
+    print(Xbar.shape)
+    X0 = torch.empty_like(Xbar)
+    # Main loop
+    itercount, n, chg = 0, 1, np.inf
+    while (chg > tol) and (itercount < max_iter):
+        # Save current barycenter for convergence checking.
+        X0.copy_(Xbar)
+        # Iterate over datasets.
+        for i in indices:
+            # Align i-th dataset to barycenter.
+            XQ = Xs[i] @ pt_align(Xs[i], X0, group=group)
+            # Take a small step towards aligned representation.
+            Xbar = (n / (n + 1)) * Xbar + (1 / (n + 1)) * XQ
+            n += 1
+        # Detect convergence.
+        chg=torch.norm(Xbar - X0) / torch.sqrt(torch.tensor(Xbar.numel(), dtype=torch.float))
+        # Display progress.
+        if verbose:
+            print(f"Iteration {itercount}, Change: {chg}")
         # Move to next iteration, with new random ordering over datasets.
         rs.shuffle(indices)
         itercount += 1

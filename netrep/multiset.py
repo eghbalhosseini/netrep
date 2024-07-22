@@ -411,7 +411,6 @@ def _euclidean_barycenter_streaming(
 
     # Initialize barycenter.
     Xbar = Xs[indices[-1]] if (warmstart is None) else warmstart
-    print(Xbar.shape)
     X0 = np.empty_like(Xbar)
 
     # Main loop
@@ -493,7 +492,6 @@ def _pt_euc_barycenter_streaming(
     indices = rs.permutation(len(Xs))
     # Initialize barycenter.
     Xbar = Xs[indices[-1]] if (warmstart is None) else warmstart
-    print(Xbar.shape)
     X0 = torch.empty_like(Xbar)
     # Main loop
     itercount, n, chg = 0, 1, np.inf

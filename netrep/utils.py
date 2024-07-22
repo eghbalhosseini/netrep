@@ -102,14 +102,20 @@ def pt_align(
         raise ValueError(f"Specified group '{group}' not recognized.")
 
 
+def posdefsqrt(A):
+    va, ua = np.linalg.eigh(A)
+    return (ua * np.sqrt(np.maximum(va, 0.0))[None, :]) @ ua.T
+
+
 def sq_bures_metric_slow(A: npt.NDArray, B: npt.NDArray) -> float:
     """Slow way to compute the square of the Bures metric between two
     positive-definite matrices.
     """
     va, ua = np.linalg.eigh(A)
-    Asq = ua @ (np.sqrt(va[:, None]) * ua.T)
+    Asq = ua @ (np.sqrt(np.maximum(va[:, None], 0.0)) * ua.T)
+    vbab = np.maximum(np.linalg.eigvalsh(Asq @ B @ Asq), 0.0)
     return (
-        np.trace(A) + np.trace(B) - 2 * np.sum(np.sqrt(np.linalg.eigvalsh(Asq @ B @ Asq)))
+        np.trace(A) + np.trace(B) - 2 * np.sum(np.sqrt(vbab))
     )
 
 
@@ -119,7 +125,8 @@ def sq_bures_metric(A: npt.NDArray, B: npt.NDArray) -> float:
     """
     va, ua = np.linalg.eigh(A)
     vb, ub = np.linalg.eigh(B)
-    sva, svb = np.sqrt(va), np.sqrt(vb)
+    sva = np.sqrt(np.maximum(va, 0.0))
+    svb = np.sqrt(np.maximum(vb, 0.0))
     return (
         np.sum(va) + np.sum(vb) - 2 * np.sum(
             np.linalg.svd(

@@ -448,7 +448,7 @@ def pt_frechet_mean(
         Xs, group="orth",
         random_state=None, tol=1e-3, max_iter=100,
         warmstart=None, verbose=False, method="streaming",
-        return_aligned_Xs=False
+        return_aligned_Xs=False,svd_solver=None
     ):
     if group== "identity":
         return torch.mean(Xs, dim=0)
@@ -456,23 +456,23 @@ def pt_frechet_mean(
     if method == "streaming":
         Xbar = _pt_euc_barycenter_streaming(
             Xs, group, random_state, tol, max_iter, warmstart,
-            verbose
+            verbose,svd_solver
         )
     elif method == "full_batch":
         Xbar = _pt_euclidean_barycenter_full_batch(
             Xs, group, random_state, tol, max_iter, warmstart,
-            verbose
+            verbose,svd_solver
         )
     if return_aligned_Xs:
         aligned_Xs = [
-            x @ pt_align(x, Xbar, group=group) for x in Xs
+            x @ pt_align(x, Xbar, group=group,svd_solver=svd_solver) for x in Xs
         ]
 
     return (Xbar, aligned_Xs) if return_aligned_Xs else Xbar
 
 
 def _pt_euc_barycenter_streaming(
-        Xs, group, random_state, tol, max_iter, warmstart, verbose
+        Xs, group, random_state, tol, max_iter, warmstart, verbose,svd_solver
     ):
     if group == "identity":
         return torch.mean(Xs, dim=0)
@@ -501,7 +501,7 @@ def _pt_euc_barycenter_streaming(
         # Iterate over datasets.
         for i in indices:
             # Align i-th dataset to barycenter.
-            XQ = Xs[i] @ pt_align(Xs[i], X0, group=group)
+            XQ = Xs[i] @ pt_align(Xs[i], X0, group=group,svd_solver=svd_solver)
             # Take a small step towards aligned representation.
             Xbar = (n / (n + 1)) * Xbar + (1 / (n + 1)) * XQ
             n += 1
@@ -518,7 +518,7 @@ def _pt_euc_barycenter_streaming(
 
 
 def _pt_euclidean_barycenter_full_batch(
-        Xs, group, random_state, tol, max_iter, warmstart, verbose
+        Xs, group, random_state, tol, max_iter, warmstart, verbose,svd_solver
 ):
 
 
@@ -556,7 +556,7 @@ def _pt_euclidean_barycenter_full_batch(
         # Iterate over datasets. Align each dataset to last
         # average (held in X0), take running sum.
         for x in Xs:
-            Xbar += x @ pt_align(x, X0, group=group)
+            Xbar += x @ pt_align(x, X0, group=group,svd_solver=svd_solver)
 
         Xbar /= len(Xs)
 

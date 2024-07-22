@@ -14,7 +14,7 @@ from sklearn.metrics.pairwise import pairwise_kernels
 from sklearn.utils.validation import check_random_state
 import torch
 
-def pt_orthogonal_procrustes(A,B,check_finite=True):
+def pt_orthogonal_procrustes(A,B,svd_solver=None,check_finite=True):
     """Orthogonal Procrustes alignment of two matrices A and B.
     both A and be needs to be size (M,N) and tensors in pytorch
     """
@@ -26,11 +26,15 @@ def pt_orthogonal_procrustes(A,B,check_finite=True):
         # if A and B are well conditioned
     # get device of A and B
     device=A.device
+
     # if device is cuda then compute the svd using cuda
     # compute xty
     xty=(B.t() @ A).t()
     if device.type=='cuda':
-        U, w, Vt = torch.linalg.svd(xty,driver='gesvd')
+        if svd_solver is None:
+            U, w, Vt = torch.linalg.svd(xty,driver='gesvd')
+        else:
+            U, w, Vt = torch.linalg.svd(xty,driver=svd_solver)
     else:
         U, w, Vt = torch.linalg.svd(xty)
 
@@ -90,10 +94,10 @@ def align(
 def pt_align(
         X: torch.Tensor,
         Y: torch.Tensor,
-        group: Literal["orth", "perm", "identity"] = "orth"
-        ) -> torch.Tensor:
+        group: Literal["orth", "perm", "identity"] = "orth",
+        svd_solver='gesvd') -> torch.Tensor:
     if group == "orth":
-        return pt_orthogonal_procrustes(X,Y)[0]
+        return pt_orthogonal_procrustes(X,Y,svd_solver=svd_solver)[0]
     elif group == "perm":
         NotImplementedError
     elif group == "identity":

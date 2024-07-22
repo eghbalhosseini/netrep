@@ -24,7 +24,15 @@ def pt_orthogonal_procrustes(A,B,check_finite=True):
     #     U, w, Vt = torch.svd_lowrank((B.t() @ A).t(), q=min(B.shape))
     # else:
         # if A and B are well conditioned
-    U, w, Vt = torch.linalg.svd((B.t() @ A).t())
+    # get device of A and B
+    device=A.device
+    # if device is cuda then compute the svd using cuda
+    # compute xty
+    xty=(B.t() @ A).t()
+    if device.type=='cuda':
+        U, w, Vt = torch.linalg.svd(xty,driver='gesvd',full_matrices=False)
+    else:
+        U, w, Vt = torch.linalg.svd((B.t() @ A).t())
 
     R=U @ Vt.t()
     scale=torch.sum(w)

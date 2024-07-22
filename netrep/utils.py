@@ -30,7 +30,7 @@ def pt_orthogonal_procrustes(A,B,check_finite=True):
     # compute xty
     xty=(B.t() @ A).t()
     if device.type=='cuda':
-        U, w, Vt = torch.linalg.svd(xty,driver='gesvd',full_matrices=False)
+        U, w, Vt = torch.linalg.svd(xty,driver='gesvd')
     else:
         U, w, Vt = torch.linalg.svd(xty)
 

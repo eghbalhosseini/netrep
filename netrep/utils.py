@@ -96,6 +96,7 @@ def pt_align(
         Y: torch.Tensor,
         group: Literal["orth", "perm", "identity"] = "orth",
         svd_solver: Literal["gesvd", "gesvda"] ='gesvd') -> torch.Tensor:
+
     if group == "orth":
         return pt_orthogonal_procrustes(X,Y,svd_solver=svd_solver)[0]
     elif group == "perm":

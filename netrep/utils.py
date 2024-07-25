@@ -33,6 +33,8 @@ def pt_orthogonal_procrustes(A,B,svd_solver=None,check_finite=True):
     if device.type=='cuda':
         if svd_solver is None:
             U, w, Vt = torch.linalg.svd(xty,driver='gesvd')
+        elif svd_solver=='lowrank':
+            U, w, Vt = torch.linalg.svd_lowrank(xty,q=min(A.shape))
         else:
             U, w, Vt = torch.linalg.svd(xty,driver=svd_solver)
     else:

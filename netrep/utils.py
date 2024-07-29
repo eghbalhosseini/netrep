@@ -28,19 +28,19 @@ def pt_orthogonal_procrustes(A,B,svd_solver=None,check_finite=True):
     device=A.device
 
     # if device is cuda then compute the svd using cuda
-    # compute xty
-    xty=(B.t() @ A).t()
+    # compute (xty)^T this is going to give us vsuT
+    #xty=(B.t() @ A).t()
     if device.type=='cuda':
         if svd_solver is None:
-            U, w, Vt = torch.linalg.svd(xty,driver='gesvd')
+            U, w, Vt = torch.linalg.svd((B.t() @ A).t(),driver='gesvd')
         elif svd_solver=='lowrank':
-            U, w, Vt = torch.svd_lowrank(xty,q=min(A.shape))
+            U, w, Vt = torch.svd_lowrank((B.t() @ A).t(),q=min(A.shape))
         else:
-            U, w, Vt = torch.linalg.svd(xty,driver=svd_solver)
+            U, w, Vt = torch.linalg.svd((B.t() @ A).t(),driver=svd_solver)
     else:
-        U, w, Vt = torch.linalg.svd(xty)
+        U, w, Vt = torch.linalg.svd((B.t() @ A).t())
 
-    R=U @ Vt.t()
+    R=U@Vt
     scale=torch.sum(w)
     return R, scale
 
